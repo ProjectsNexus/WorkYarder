@@ -3224,56 +3224,96 @@
 
     // Submit new service
     async function submitNewService() {
+        const name = document.getElementById('service-name').value.trim();
+        const category = document.getElementById('service-category').value;
+        const description = document.getElementById('service-description').value.trim();
+        const price = parseFloat(document.getElementById('service-price').value);
+        const duration = parseInt(document.getElementById('service-duration').value);
+
+        console.log("Collected values:", { name, category, description, price, duration });
+
+        // Basic validation
+        if (!name || !category || !description || isNaN(price) || isNaN(duration)) {
+            alert("Please fill in all fields correctly.");
+            return;
+        }
+
         try {
-            const form = document.getElementById('add-service-form');
-            if (!form) return;
-
-            // Collect field values
-            const name = document.getElementById('service-name').value.trim();
-            const category = document.getElementById('service-category').value;
-            const description = document.getElementById('service-description').value.trim();
-            const price = document.getElementById('service-price').value;
-            const duration = document.getElementById('service-duration').value;
-
-            // Basic validation
-            if (!name || !category || !description || !price || !duration) {
-                showNotification('error', 'Please fill in all required fields');
-                return;
-            }
-
-            // Construct data object
-            const data = {
-                name,
-                category,
-                description,
-                price: parseFloat(price),
-                duration: parseInt(duration)
-            };
-
-            // Send to backend
             const response = await fetch('assets/php/schedule_service.php', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, category, description, price, duration })
             });
 
             const result = await response.json();
+            console.log('Server response:', result);
 
             if (result.success) {
-                showNotification('success', 'Service added successfully!');
-                form.reset();
-                closeModal('add-service-modal'); // Only if you're using a modal
+                alert("Service added successfully!");
+                document.getElementById('add-service-form').reset();
             } else {
-                showNotification('error', result.error || 'Failed to add service');
+                alert("Error: " + result.error);
             }
-
-        } catch (error) {
-            console.error('Error adding service:', error);
-            showNotification('error', 'An error occurred while adding the service');
+        } catch (err) {
+            console.error("Fetch error:", err);
+            alert("An error occurred while submitting the service.");
         }
     }
+
+
+    // async function submitNewService() {
+    //     try {
+    //         const form = document.getElementById('add-service-form');
+    //         // if (!form) return;
+    //         console.log('form selective')
+    //         // Collect field values
+    //         const name = document.getElementById('service-name').value.trim();
+    //         const category = document.getElementById('service-category').value;
+    //         const description = document.getElementById('service-description').value.trim();
+    //         const price = document.getElementById('service-price').value;
+    //         const duration = document.getElementById('service-duration').value;
+
+    //         // Basic validation
+    //         if (!name || !category || !description || !price || !duration) {
+    //             showNotification('error', 'Please fill in all required fields');
+    //             return;
+    //         }
+
+    //         console.log(name + ' ' + price);
+    //         // Construct data object
+    //         const data = {
+    //             name,
+    //             category,
+    //             description,
+    //             price: parseFloat(price),
+    //             duration: parseInt(duration)
+    //         };
+
+    //         console.log(data)
+    //         // Send to backend
+    //         const response = await fetch('assets/php/schedule_service.php', {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json'
+    //             },
+    //             body: JSON.stringify(data)
+    //         });
+
+    //         const result = await response.json();
+
+    //         if (result.success) {
+    //             showNotification('success', 'Service added successfully!');
+    //             form.reset();
+    //             closeModal('add-service-modal'); // Only if you're using a modal
+    //         } else {
+    //             showNotification('error', result.error || 'Failed to add service');
+    //         }
+
+    //     } catch (error) {
+    //         console.error('Error adding service:', error);
+    //         showNotification('error', 'An error occurred while adding the service');
+    //     }
+    // }
 
 
 
@@ -4938,12 +4978,12 @@
                             </div>
                             <div class='service-meta'>
                                 <span>
-                                    <button class="btn-icon" title="Edit Service" onclick="editService(${service.id})">
+                                    <button class="btn-icon" title="Edit Service" onclick="DisplayService(${service.id})">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                 </span>
                                 <span>
-                                    <button class="btn-icon" title="Delete Service" onclick="deleteService(${service.id})">
+                                    <button class="btn-icon" title="Delete Service" onclick="DeleteService(${service.id})">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </span>
@@ -4983,6 +5023,108 @@
         }
     }
 
+    //Delet Service 
+    function DeleteService(serviceId) {
+        const modal = document.getElementById('service-delete-modal');
+        modal.classList.add('show');
+
+        fetch(`assets/php/delete_service.php?id=${serviceId}`, {
+            method: 'DELETE'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert("Service deleted successfully!");
+                
+                // Optionally close modal
+                document.getElementById('service-actions-modal').classList.remove('show');
+
+                // Optionally remove the service from a list in UI
+                const row = document.querySelector(`[data-service-id="${serviceId}"]`);
+                if (row) row.remove();
+            } else {
+                alert("Failed to delete service: " + data.error);
+            }
+        })
+        .catch(err => {
+            alert("Error: " + err.message);
+        });
+    }
+
+    //Display services details
+    function DisplayService(serviceId) {
+
+        const modal = document.getElementById('service-actions-modal');
+        modal.classList.add('show');
+        document.querySelector('.service-details .loading-state').style.display = 'block';
+        document.getElementById('edit-service-form').style.display = 'none';
+        document.querySelector('.save-service-btn').style.display = 'none';
+        document.querySelector('.edit-mode-btn').style.display = 'inline-block';
+
+        fetch(`assets/php/get_service.php?id=${serviceId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) throw new Error(data.error);
+                
+                const service = data.service;
+                // Fill form with data
+                document.getElementById('service-name').value = service.name;
+                document.getElementById('service-category').value = service.category;
+                document.getElementById('service-description').value = service.description;
+                document.getElementById('service-price').value = service.base_price;
+                document.getElementById('service-status').value = service.status;
+
+                // Hide loading and show form
+                document.querySelector('.service-details .loading-state').style.display = 'none';
+                document.getElementById('edit-service-form').style.display = 'block';
+
+                // Store ID
+                document.getElementById('edit-service-form').dataset.serviceId = service.id;
+            })
+            .catch(err => {
+                document.querySelector('.service-details .loading-state').textContent = `Error loading service: ${err.message}`;
+            });
+    }
+
+       //Save Changes in Servies
+    function SaveServiceChange() {
+        const form = document.getElementById('edit-service-form');
+        const serviceId = form.dataset.serviceId;
+
+        const formData = {
+            id: serviceId,
+            name: form.name.value.trim(),
+            category: form.category.value,
+            description: form.description.value.trim(),
+            base_price: parseFloat(form.base_price.value),
+            status: form.status.value
+        };
+
+        console.log(formData);
+        fetch('assets/php/update_service.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) throw new Error(data.error);
+
+            alert('Service updated successfully!');
+            document.getElementById('service-actions-modal').style.display = 'none';
+        })
+        .catch(err => {
+            alert('Error updating service: ' + err.message);
+        });
+
+
+        // Close modal
+        document.querySelectorAll('.modal-close, .close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('service-actions-modal').style.display = 'none';
+            });
+        });
+    }
     // Enhanced loadTaskTemplatesList function with animations
     async function loadTaskTemplatesList() {
         try {
