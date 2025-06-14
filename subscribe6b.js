@@ -1331,7 +1331,6 @@ function updateCalendar() {
 function generateTimeSlots() {
     const container = document.getElementById("timeSlotsContainer");
     container.innerHTML = ""; // Clear existing slots
-    console.log('the work')
     const now = new Date();
     const startHour = 7;
     const endHour = 19;
@@ -1571,7 +1570,6 @@ function selectDate(element, year, month, day) {
 // Select time slot function
 function selectTimeSlot(element) {
     var selectedTime = document.querySelector(".time-slots");
-    console.log(selectedTime.innerHTML)
     
     // Remove selection from all time slots
     const allTimeSlots = document.querySelectorAll('.time-slot');
